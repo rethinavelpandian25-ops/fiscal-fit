@@ -1,13 +1,43 @@
-import io
+import io, os, json, sqlite3
 from datetime import date
 from xml.sax.saxutils import escape
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, session
+from werkzeug.security import generate_password_hash, check_password_hash
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "dev-only-change-me")
+app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax", PERMANENT_SESSION_LIFETIME=60 * 60 * 24 * 30)
+DB = os.environ.get("DB_PATH", "fiscalfit.db")
+
+
+def q(sql, a=(), one=False):
+    c = sqlite3.connect(DB)
+    c.row_factory = sqlite3.Row
+    c.execute("CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT UNIQUE, pw TEXT, data TEXT DEFAULT '{}', hist TEXT DEFAULT '[]')")
+    try:
+        cur = c.execute(sql, a)
+        r = cur.fetchone() if one else None
+        c.commit()
+        return r
+    finally:
+        c.close()
+
+
+def me():
+    uid = session.get("uid")
+    return q("SELECT * FROM users WHERE id=?", (uid,), True) if uid else None
+
+
+def pub(u):
+    return dict(name=u["name"], email=u["email"], data=json.loads(u["data"]), hist=json.loads(u["hist"]))
+
+
+def err(msg, code=400):
+    return jsonify(error=msg), code
 EXP = ["food", "transport", "utilities", "health", "education", "entertainment", "shopping", "other"]
 LEVELS = [(0, "Unsafe", "#ef4444", "Your finances need urgent attention. Start with the red tips below."),
           (40, "Medium", "#f59e0b", "You are coping, but one shock could hurt. Close the gaps below."),
@@ -140,6 +170,69 @@ def analyze(d):
 @app.get("/")
 def index():
     return render_template("index.html")
+
+
+@app.post("/api/signup")
+def signup():
+    d = request.get_json(force=True, silent=True) or {}
+    name, email, pw = (d.get("name") or "").strip()[:40], (d.get("email") or "").strip().lower()[:120], d.get("password") or ""
+    if not name or "@" not in email or "." not in email:
+        return err("Enter your name and a valid email.")
+    if len(pw) < 8:
+        return err("Password must be at least 8 characters.")
+    try:
+        q("INSERT INTO users(name,email,pw) VALUES(?,?,?)", (name, email, generate_password_hash(pw)))
+    except sqlite3.IntegrityError:
+        return err("An account with this email already exists.", 409)
+    u = q("SELECT * FROM users WHERE email=?", (email,), True)
+    session.permanent, session["uid"] = True, u["id"]
+    return jsonify(pub(u))
+
+
+@app.post("/api/login")
+def login():
+    d = request.get_json(force=True, silent=True) or {}
+    u = q("SELECT * FROM users WHERE email=?", ((d.get("email") or "").strip().lower(),), True)
+    if not u or not check_password_hash(u["pw"], d.get("password") or ""):
+        return err("Wrong email or password.", 401)
+    session.permanent, session["uid"] = True, u["id"]
+    return jsonify(pub(u))
+
+
+@app.post("/api/logout")
+def logout():
+    session.clear()
+    return jsonify(ok=True)
+
+
+@app.get("/api/me")
+def api_me():
+    u = me()
+    return jsonify(pub(u)) if u else err("Not logged in.", 401)
+
+
+@app.post("/api/save")
+def save():
+    u = me()
+    if not u:
+        return err("Please log in.", 401)
+    d = request.get_json(force=True, silent=True) or {}
+    res, hist, today = analyze(d), json.loads(u["hist"]), date.today().isoformat()
+    hist = [h for h in hist if h["d"] != today] + [dict(d=today, s=res["score"])]
+    q("UPDATE users SET data=?, hist=? WHERE id=?", (json.dumps(d), json.dumps(hist[-30:]), u["id"]))
+    return jsonify(result=res, hist=hist[-30:])
+
+
+@app.post("/api/delete")
+def delete():
+    u = me()
+    if not u:
+        return err("Please log in.", 401)
+    if not check_password_hash(u["pw"], (request.get_json(force=True, silent=True) or {}).get("password") or ""):
+        return err("Password is incorrect.", 401)
+    q("DELETE FROM users WHERE id=?", (u["id"],))
+    session.clear()
+    return jsonify(ok=True)
 
 
 @app.post("/api/analyze")
