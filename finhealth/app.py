@@ -120,6 +120,13 @@ def analyze(d):
         tip(2, "🏆", "Strong base, keep going", "Review insurance, investments and spending once a year, and raise your cover as income grows.")
     tips.sort(key=lambda t: t["p"])
 
+    corpus, bal, contrib, fy = outgo * 12 * 25, fd + stocks, max(save, sip), None
+    for y in range(1, 61):
+        bal = (bal + 12 * contrib) * 1.10
+        if bal >= corpus:
+            fy = y
+            break
+    fire = dict(corpus=round(corpus), years=fy, age=int(age + fy) if fy else None)
     labels = {k: v for k, v in exp.items()}
     if rent: labels["rent"] = rent
     if emi: labels["home loan EMI"] = emi
@@ -127,7 +134,7 @@ def analyze(d):
     return dict(score=score, level=lvl, label=LEVELS[lvl][1], color=LEVELS[lvl][2], blurb=LEVELS[lvl][3],
                 subs=[dict(name=a, score=round(b), note=c) for a, b, c in subs],
                 m=dict(income=income, outgo=outgo, save=save, sr=sr, em=em_m, dti=dti, nw=nw, target=target, liab=liab, spend=spend, debt=emi + demi),
-                expenses={k: v for k, v in labels.items() if v > 0}, sip=sipd, loan_note=loan_note, tips=tips)
+                expenses={k: v for k, v in labels.items() if v > 0}, sip=sipd, loan_note=loan_note, tips=tips, fire=fire)
 
 
 @app.get("/")
