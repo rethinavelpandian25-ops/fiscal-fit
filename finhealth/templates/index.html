@@ -32,7 +32,7 @@ small,.mut{color:var(--mut)}label{display:block;font-size:13px;font-weight:600;c
 .top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}.top h2{margin:0;font-size:clamp(22px,3vw,30px);letter-spacing:-.02em}.tr{display:flex;gap:10px;align-items:center}
 .av{width:40px;height:40px;border-radius:50%;background:var(--lime);color:#10230a;display:grid;place-items:center;font-weight:800}
 .bento{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}.s3{grid-column:span 3}.s4{grid-column:span 4}.s6{grid-column:span 6}.s8{grid-column:span 8}.s12{grid-column:span 12}
-.card{background:var(--card);border-radius:22px;padding:20px;min-width:0;animation:in .5s both}.card:nth-child(2){animation-delay:.05s}.card:nth-child(3){animation-delay:.1s}.card:nth-child(n+4){animation-delay:.15s}
+.card{background:var(--card);border-radius:22px;padding:20px;min-width:0;animation:in .5s backwards}.card:nth-child(2){animation-delay:.05s}.card:nth-child(3){animation-delay:.1s}.card:nth-child(n+4){animation-delay:.15s}
 @keyframes in{from{opacity:0;transform:translateY(14px)}}
 .big{font-size:clamp(28px,3.2vw,40px);font-weight:800;letter-spacing:-.03em;line-height:1.15}.big.sm{font-size:26px}
 .chip{display:inline-block;font-size:12px;font-weight:700;color:#4d7a12;background:#9ccc3c33;padding:2px 10px;border-radius:99px}.stats{display:grid;gap:14px;align-content:space-between}
@@ -56,6 +56,13 @@ small,.mut{color:var(--mut)}label{display:block;font-size:13px;font-weight:600;c
 @media(max-width:700px){.s3,.s4,.s6,.s8{grid-column:span 12}}
 @media(max-width:900px){.shell{grid-template-columns:1fr;margin:0;border-radius:0;min-height:100vh}.side{position:fixed;bottom:0;left:0;right:0;z-index:20;flex-direction:row;background:var(--shell);padding:6px;border-top:1px solid var(--line)}.side .lg,.promo{display:none}.nv{flex-direction:column;gap:0;font-size:11px;padding:7px 2px;text-align:center;justify-content:center}.nv.on{box-shadow:none}.main{padding-bottom:96px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.cf{display:none}}
+.pw{position:relative}.pw input{padding-right:46px}.eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:10px;font-size:16px}.eye:hover{background:var(--line)}
+.av{overflow:hidden}.av img{width:100%;height:100%;object-fit:cover}.av.xl{width:84px;height:84px;font-size:32px;flex:none}
+.card{transition:transform .25s,box-shadow .25s}.card:hover{transform:translateY(-3px);box-shadow:0 18px 40px -22px #0005}
+.pb b{position:relative;overflow:hidden}.pb b::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,#fff6,transparent);transform:translateX(-100%);animation:sw 2.4s infinite}@keyframes sw{to{transform:translateX(100%)}}
+.vc{animation:fl 5s ease-in-out infinite}@keyframes fl{50%{transform:translateY(-5px)}}
+.txr{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line);transition:all .3s;animation:in .4s backwards}.txr.gone{opacity:0;transform:translateX(30px)}.txr button{padding:6px;border-radius:10px}.txr button:hover{background:var(--main)}
+.ti{width:40px;height:40px;border-radius:12px;background:var(--main);display:grid;place-items:center;font-size:18px;flex:none}.tm{flex:1;min-width:0}.tm b,.tm small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style></head><body>
 <div class="aw" id="auth"><button class="tg" aria-label="Toggle theme"></button><div class="ab"><div class="ah"><div class="lg" style="padding:0"><svg viewBox="0 0 64 64"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b5e04a"/><stop offset="1" stop-color="#6fa31f"/></linearGradient></defs><rect width="64" height="64" rx="16" fill="url(#lg)"/><path d="M9 36h12l6-17 9 28 6-13h13" fill="none" stroke="#10230a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>FiscalFit</div><h1>Know your money. Grow your future.</h1><p>Get a clear financial health score, smart tips and a plan to improve.</p><div id="demo"></div></div>
 <form class="af" id="af"><div class="tabs"><button type="button" data-m="login" class="on">Log in</button><button type="button" data-m="signup">Sign up</button></div>
@@ -63,19 +70,24 @@ small,.mut{color:var(--mut)}label{display:block;font-size:13px;font-weight:600;c
 <div class="er" id="aerr"></div><button class="btn" id="asub">Log in</button></form></div></div>
 
 <div class="shell" id="app" hidden><aside class="side"><div class="lg"><svg viewBox="0 0 64 64"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b5e04a"/><stop offset="1" stop-color="#6fa31f"/></linearGradient></defs><rect width="64" height="64" rx="16" fill="url(#lg)"/><path d="M9 36h12l6-17 9 28 6-13h13" fill="none" stroke="#10230a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>FiscalFit</div>
-<button class="nv on" data-p="dash">📊 Dashboard</button><button class="nv" data-p="data">📝 My finances</button><button class="nv" data-p="plan">🎯 Planner</button><button class="nv" data-p="set">⚙️ Settings</button>
+<button class="nv on" data-p="dash">📊 Dashboard</button><button class="nv" data-p="data">📝 My finances</button><button class="nv" data-p="tx">💸 Transactions</button><button class="nv" data-p="plan">🎯 Planner</button><button class="nv" data-p="set">⚙️ Settings</button>
 <div class="promo"><b>Your plan, in PDF</b>Download a personal improvement report.<br><button class="btn" id="pdf2" style="margin-top:10px;width:100%">Download report</button></div></aside>
 <section class="main"><div class="top"><div><h2 id="hi"></h2><small id="sub"></small></div><div class="tr"><button class="tg" aria-label="Toggle theme"></button><div class="av" id="av"></div></div></div>
 <div class="pg" id="p-dash"></div>
 <div class="pg" id="p-data" hidden><div class="card" style="margin-bottom:16px"><b>Tell us about your money</b><small style="display:block">Amounts in ₹. Leave unknown fields empty.</small><div class="pb"><b id="pbar"></b></div><small id="ptx">0% complete</small></div><div class="grid" id="grid"></div><div class="er" id="derr" style="text-align:center;margin-top:12px"></div><div style="display:flex;justify-content:center;margin-top:10px"><button class="btn" id="go">Save and analyse</button></div></div>
 <div class="pg" id="p-plan" hidden></div>
-<div class="pg" id="p-set" hidden><div class="grid"><div class="card"><h3>👤 Account</h3><p><b id="sn"></b><br><span class="mut" id="se2"></span></p><button class="btn alt" id="lo">Log out</button></div>
-<div class="card"><h3>🗑️ Delete account</h3><p class="mut">This permanently deletes your account, saved answers and score history.</p><input id="dp" type="password" placeholder="Confirm your password"><div class="er" id="de"></div><button class="btn red" id="del">Delete my account</button></div></div></div>
+<div class="pg" id="p-set" hidden><div class="grid">
+<div class="card"><h3>🖼️ Profile photo</h3><div style="display:flex;gap:16px;align-items:center;margin-top:14px"><div class="av xl" id="sav"></div><div style="display:grid;gap:8px"><button class="btn" id="pu">Upload photo</button><button class="btn alt" id="pr">Remove</button></div></div><input type="file" id="pf" accept="image/*" hidden><div class="er" id="pam"></div></div>
+<div class="card"><h3>👤 Profile</h3><div class="fields"><label>Name<input id="pn" maxlength="40"></label><label>Email<input id="pe" type="email"></label><div class="er" id="pm"></div><button class="btn" id="sp">Save changes</button></div></div>
+<div class="card"><h3>🔒 Change password</h3><div class="fields"><input id="po" type="password" placeholder="Current password" autocomplete="current-password"><input id="pnw" type="password" placeholder="New password (8+ characters)" autocomplete="new-password"><div class="er" id="pw2"></div><button class="btn" id="pwb">Update password</button></div></div>
+<div class="card"><h3>🎨 Appearance and session</h3><div class="fields"><button class="btn alt tg2">🌓 Switch light / dark theme</button><button class="btn alt" id="lo">Log out</button></div></div>
+<div class="card"><h3>🗑️ Delete account</h3><p class="mut">This permanently deletes your account, transactions, saved answers and score history.</p><input id="dp" type="password" placeholder="Confirm your password"><div class="er" id="de"></div><button class="btn red" id="del">Delete my account</button></div></div></div>
+<div class="pg" id="p-tx" hidden></div>
 </section></div>
 <script>
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
-const api=async(u,b)=>{const r=await fetch(u,{method:b?'POST':'GET',headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});let j={};try{j=await r.json()}catch(e){}if(!r.ok)throw new Error(j.error||'Something went wrong');return j};
-const inr=x=>'₹'+Math.round(x).toLocaleString('en-IN'),num=v=>parseFloat(v)||0;
+const api=async(u,b,m)=>{const r=await fetch(u,{method:m||(b?'POST':'GET'),headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});let j={};try{j=await r.json()}catch(e){}if(!r.ok)throw new Error(j.error||'Something went wrong');return j};
+const inr=x=>(x<0?'-':'')+'₹'+Math.abs(Math.round(x)).toLocaleString('en-IN'),num=v=>parseFloat(v)||0;
 let U,D={},R=null,CH=[],mode='login';
 const H=[['rent','Monthly rent (₹)','n','rent'],['home_price','Home price (₹)','n','own,loan'],['loan_out','Loan outstanding (₹)','n','loan'],['loan_rate','Loan interest rate (% a year)','n','loan'],['emi','Monthly home loan EMI (₹)','n','loan'],['loan_years','Years left on loan','n','loan']];
 const S=[['About you','🙋',[['age','Your age','n'],['salary','Monthly salary (₹)','n'],['passive','Passive income a month (rent, dividends, side income)','n']]],
@@ -101,25 +113,25 @@ $('#demo').innerHTML=gauge('d');let di=0;const dv=[34,62,88],dm=()=>{if(!$('#aut
 /* auth */
 $$('.tabs button').forEach(b=>b.onclick=()=>{mode=b.dataset.m;$$('.tabs button').forEach(x=>x.classList.toggle('on',x==b));$('#an').hidden=mode!='signup';$('#asub').textContent=mode=='signup'?'Create account':'Log in';$('#ap').autocomplete=mode=='signup'?'new-password':'current-password';$('#aerr').textContent=''});
 $('#af').onsubmit=async e=>{e.preventDefault();$('#asub').disabled=true;try{enter(await api('/api/'+mode,{name:$('#an').value,email:$('#ae').value,password:$('#ap').value}))}catch(x){$('#aerr').textContent=x.message;$('#af').classList.remove('shake');void $('#af').offsetWidth;$('#af').classList.add('shake')}$('#asub').disabled=false};
-async function enter(u){U=u;D=u.data||{};$('#auth').hidden=true;$('#app').hidden=false;$('#hi').textContent='Hi, '+U.name+' 👋';$('#av').textContent=U.name[0].toUpperCase();$('#sn').textContent=U.name;$('#se2').textContent=U.email;fillForm();
- if(D.salary>0){try{R=await api('/api/analyze',D);dash()}catch(e){}nav('dash')}else nav('data')}
+async function enter(u){U=u;D=u.data||{};$('#auth').hidden=true;$('#app').hidden=false;setUser();fillForm();
+ if(D.salary>0){try{R=await api('/api/analyze',D)}catch(e){}}loadTx();nav('dash')}
 const out=()=>api('/api/logout',{}).then(()=>location.reload());$('#lo').onclick=out;
 $('#del').onclick=async()=>{if(!confirm('Delete your account and all data permanently? This cannot be undone.'))return;try{await api('/api/delete',{password:$('#dp').value});location.reload()}catch(e){$('#de').textContent=e.message}};
 /* nav */
-const T={dash:['Overview','Your financial health at a glance'],data:['My finances','Fill in your details to get your score'],plan:['Planner','Test ideas and plan your goals'],set:['Settings','Manage your account']};
-function nav(p){if((p=='dash'||p=='plan')&&!R)p='data';$$('.pg').forEach(e=>e.hidden=e.id!='p-'+p);$$('.nv').forEach(b=>b.classList.toggle('on',b.dataset.p==p));$('#sub').textContent=T[p][1];scrollTo({top:0});if(p=='plan')plan();if(p=='dash')dash()}
+const T={dash:['Overview','Your financial health at a glance'],data:['My finances','Fill in your details to get your score'],tx:['Transactions','Track your income and expenses'],plan:['Planner','Test ideas and plan your goals'],set:['Settings','Manage your account']};
+function nav(p){if(p=='plan'&&!R)p='data';$$('.pg').forEach(e=>e.hidden=e.id!='p-'+p);$$('.nv').forEach(b=>b.classList.toggle('on',b.dataset.p==p));$('#sub').textContent=T[p][1];scrollTo({top:0});if(p=='plan')plan();if(p=='dash')dash();if(p=='tx')txPage()}
 $$('.nv').forEach(b=>b.onclick=()=>nav(b.dataset.p));
 $('#go').onclick=async()=>{collect();if(D.age<18||D.salary<=0){$('#derr').textContent='Please enter your age (18+) and monthly salary.';return}$('#derr').textContent='';$('#go').textContent='Analysing...';
  try{const j=await api('/api/save',D);R=j.result;U.hist=j.hist;nav('dash');if(R.level>=2)boom()}catch(e){$('#derr').textContent=e.message}$('#go').textContent='Save and analyse'};
 async function pdf(){collect();const b=await(await fetch('/api/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(D)})).blob(),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='financial-health-report.pdf';a.click()}
 $('#pdf2').onclick=()=>R?pdf():nav('data');
 /* dashboard */
-function dash(){if(!R)return;const r=R,m=r.m,sv=Math.max(0,m.save),E=Object.entries(r.expenses).sort((a,b)=>b[1]-a[1]),tot=E.reduce((a,x)=>a+x[1],0)||1,pal=['#6fa31f','#9ccc3c','#c7e35a','#f9a65a','#f6c667','#8bd3c7','#b9c2b9'],lim=Math.min(100,100*m.outgo/m.income),lc=lim<70?'#22c55e':lim<90?'#f59e0b':'#ef4444',h=(U.hist||[]).slice(-6).reverse(),t0=r.tips[0],P=['#ef4444','#f59e0b','#22c55e'];
+function dash(){if(!R){$('#p-dash').innerHTML=`<div class="bento"><div class="card s12 tipb"><b>👋 Complete your financial profile</b><p>Fill in your details to unlock your score, tips and planner.</p><button class="btn" data-g="data">Start now</button></div>${trk()}</div>`;$$('#p-dash [data-g]').forEach(b=>b.onclick=()=>nav(b.dataset.g));setTimeout(()=>{$$('#p-dash [data-w]').forEach(b=>b.style.width=b.dataset.w+'%');countUp()},150);charts();return}const r=R,m=r.m,sv=Math.max(0,m.save),E=Object.entries(r.expenses).sort((a,b)=>b[1]-a[1]),tot=E.reduce((a,x)=>a+x[1],0)||1,pal=['#6fa31f','#9ccc3c','#c7e35a','#f9a65a','#f6c667','#8bd3c7','#b9c2b9'],lim=Math.min(100,100*m.outgo/m.income),lc=lim<70?'#22c55e':lim<90?'#f59e0b':'#ef4444',h=(U.hist||[]).slice(-6).reverse(),t0=r.tips[0],P=['#ef4444','#f59e0b','#22c55e'];
  $('#p-dash').innerHTML=`<div class="bento" style="--lc:${r.color}">
- <div class="card s6"><small>Net worth</small><div class="big">${inr(m.nw)}</div><canvas id="c1" height="150"></canvas></div>
- <div class="card s3 stats">${[['Monthly income',m.income,'all sources'],['Monthly spending',m.outgo,(100*m.outgo/m.income).toFixed(0)+'% of income'],['Saved each month',m.save,(m.sr*100).toFixed(0)+'% of income']].map(x=>`<div><small>${x[0]}</small><div class="big sm">${inr(x[1])}</div><span class="chip">${x[2]}</span></div>`).join('')}</div>
- <div class="card s3"><div class="vc"><b>FiscalFit score</b><div class="sc">${r.score}/100</div><span>${r.label}</span><p style="margin:10px 0 0;font-size:13px">${U.name}</p></div><div class="qa"><button data-g="data">✏️<span>Edit</span></button><button data-g="plan">🎯<span>Plan</span></button><button id="pd">📄<span>Report</span></button><button class="tg2">🌓<span>Theme</span></button></div></div>
- <div class="card s6"><b>Spending vs income</b><div class="pb"><b data-w="${lim}" style="background:${lc}"></b></div><small>${inr(m.outgo)} of ${inr(m.income)} ${lim<70?'· healthy':lim<90?'· watch it':'· too high'}</small></div>
+ <div class="card s6"><small>Net worth</small><div class="big" data-cnt="${m.nw}">${inr(m.nw)}</div><canvas id="c1" height="150"></canvas></div>
+ <div class="card s3 stats">${[['Monthly income',m.income,'all sources'],['Monthly spending',m.outgo,(100*m.outgo/m.income).toFixed(0)+'% of income'],['Saved each month',m.save,(m.sr*100).toFixed(0)+'% of income']].map(x=>`<div><small>${x[0]}</small><div class="big sm" data-cnt="${x[1]}">${inr(x[1])}</div><span class="chip">${x[2]}</span></div>`).join('')}</div>
+ <div class="card s3"><div class="vc"><b>FiscalFit score</b><div class="sc">${r.score}/100</div><span>${r.label}</span><p style="margin:10px 0 0;font-size:13px">${esc(U.name)}</p></div><div class="qa"><button data-g="data">✏️<span>Edit</span></button><button data-g="plan">🎯<span>Plan</span></button><button id="pd">📄<span>Report</span></button><button class="tg2">🌓<span>Theme</span></button></div></div>
+ ${trk()}<div class="card s6"><b>Spending vs income</b><div class="pb"><b data-w="${lim}" style="background:${lc}"></b></div><small>${inr(m.outgo)} of ${inr(m.income)} ${lim<70?'· healthy':lim<90?'· watch it':'· too high'}</small></div>
  <div class="card s6 tipb"><b>${t0.icon} ${t0.title}</b><p>${t0.text}</p><button class="btn" data-g="plan">Open planner</button></div>
  <div class="card s4"><b>Cost analysis</b><div class="big sm">${inr(tot)}</div><div class="seg">${E.map((e,i)=>`<i style="flex:${e[1]};background:${pal[i%7]}"></i>`).join('')}</div>${E.slice(0,6).map((e,i)=>`<div class="row"><span><i style="background:${pal[i%7]}"></i>${e[0]}</span><b>${Math.round(100*e[1]/tot)}%</b></div>`).join('')}</div>
  <div class="card s4 ${r.level==0?'pulse':r.level==3?'glow':''}"><b>Financial health</b>${gauge('r')}<small>${r.blurb}</small></div>
@@ -127,8 +139,8 @@ function dash(){if(!R)return;const r=R,m=r.m,sv=Math.max(0,m.save),E=Object.entr
  <div class="card s8"><b>Smart tips for you</b>${r.tips.slice(0,5).map(t=>`<div class="tip" style="--p:${P[t.p]}"><b>${t.icon} ${t.title}</b><small>${t.text}</small></div>`).join('')}</div>
  <div class="card s4"><b>Score history</b>${h.map((x,i)=>{const d=h[i+1]?x.s-h[i+1].s:0;return`<div class="row"><span class="mut">${x.d}</span><b>${x.s} <small style="color:${d>=0?'#22c55e':'#ef4444'}">${d?(d>0?'▲ +':'▼ ')+d:''}</small></b></div>`}).join('')||'<small>Save again later to track progress.</small>'}</div></div>`;
  $$('#p-dash [data-g]').forEach(b=>b.onclick=()=>nav(b.dataset.g));$('#pd').onclick=pdf;$$('.tg2').forEach(b=>b.onclick=tgl);
- setTimeout(()=>{fill($('#p-dash'),r.score);$$('#p-dash [data-w]').forEach(b=>b.style.width=b.dataset.w+'%')},150);charts()}
-function charts(){const c=$('#c1');if(!R||!c||c.offsetParent===null)return;CH.forEach(x=>x.destroy());const m=R.m;Chart.defaults.color=getComputedStyle(document.documentElement).getPropertyValue('--mut').trim();Chart.defaults.font.family="'Plus Jakarta Sans',sans-serif";
+ setTimeout(()=>{fill($('#p-dash'),r.score);$$('#p-dash [data-w]').forEach(b=>b.style.width=b.dataset.w+'%')},150);countUp();charts()}
+function charts0(){const c=$('#c1');if(!R||!c||c.offsetParent===null)return;CH.forEach(x=>x.destroy());const m=R.m;Chart.defaults.color=getComputedStyle(document.documentElement).getPropertyValue('--mut').trim();Chart.defaults.font.family="'Plus Jakarta Sans',sans-serif";
  CH=[new Chart(c,{type:'bar',data:{labels:['Income','Spending','EMIs','Savings'],datasets:[{data:[m.income,m.spend,m.debt,Math.max(0,m.save)],backgroundColor:['#9ccc3c','#f9a65a','#ef4444','#2dd4bf'],borderRadius:10,borderSkipped:false}]},options:{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>v>=1e5?(v/1e5).toFixed(1)+'L':v>=1e3?v/1e3+'k':v},grid:{color:'#8883'}},x:{grid:{display:false}}},animation:{duration:1400}}})]}
 function boom(){const c=['#22c55e','#9ccc3c','#f59e0b','#6366f1','#ec4899'];for(let i=0;i<48;i++){const e=document.createElement('i');e.className='cf';e.style.cssText=`left:${Math.random()*100}vw;background:${c[i%5]};animation-delay:${Math.random()*.6}s;--x:${Math.random()*200-100}px`;document.body.appendChild(e);setTimeout(()=>e.remove(),3600)}}
 /* planner */
@@ -144,5 +156,51 @@ function plan(){const r=R,m=r.m;$('#p-plan').innerHTML=`<div class="card"><h3>�
  ['sx','sc','se'].forEach(i=>$('#'+i).oninput=up);
  const gp=()=>{const F=+$('#ga').value,n=+$('#gy').value*12,q=+$('#gr').value/1200;if(F>0&&n>0){const p=q?F*q/((Math.pow(1+q,n)-1)*(1+q)):F/n;$('#gn').textContent=inr(p);$('#gx').textContent=R.m.save>0?`That is ${Math.round(100*p/R.m.save)}% of your monthly savings.`:'That is more than you save now, so free up cash first.'}};
  ['ga','gy','gr'].forEach(i=>$('#'+i).oninput=gp);gp()}
+
+/* transactions */
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let TX=[],ed=null,tk='expense',flt='all',C2=[];
+const CAT={income:['Salary','Business','Freelance','Interest','Gift','Other'],expense:['Food','Rent','Transport','Bills','Shopping','Health','Education','Entertainment','Travel','Other']};
+const IC={Salary:'💼',Business:'🏪',Freelance:'💻',Interest:'🏦',Gift:'🎁',Food:'🍔',Rent:'🏠',Transport:'🚗',Bills:'💡',Shopping:'🛍️',Health:'💊',Education:'🎓',Entertainment:'🎬',Travel:'✈️',Other:'📦'};
+const ymk=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+function ts(){const mo=ymk(new Date()),by={},cat={};let i=0,e=0;TX.forEach(t=>{const k=t.d.slice(0,7),x=by[k]=by[k]||[0,0];x[t.kind=='income'?0:1]+=t.amt;if(k==mo){if(t.kind=='income')i+=t.amt;else{e+=t.amt;cat[t.cat]=(cat[t.cat]||0)+t.amt}}});const ms=[];for(let n=5;n>=0;n--){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-n);const k=ymk(d);ms.push([k,by[k]||[0,0]])}return{i,e,cat,ms}}
+const loadTx=()=>api('/api/tx').then(x=>{TX=x;if(!$('#p-dash').hidden)dash();if(!$('#p-tx').hidden)txPage()}).catch(()=>{});
+function countUp(){$$('[data-cnt]').forEach(e=>{const v=+e.dataset.cnt,t=performance.now();(function f(n){const p=Math.min(1,(n-t)/1200);e.textContent=inr(v*(1-Math.pow(1-p,3)));if(p<1)requestAnimationFrame(f)})(t)})}
+const trk=()=>{const s=ts(),b=s.i-s.e,mx=Math.max(s.i,s.e,1);return`<div class="card s12"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><b>Cash flow tracker · this month</b><button class="btn alt" data-g="tx">Open tracker</button></div><div class="bento" style="margin-top:12px;gap:18px"><div class="s4"><small>Income</small><div class="big sm" data-cnt="${s.i}">${inr(s.i)}</div><div class="pb"><b data-w="${100*s.i/mx}" style="background:#22c55e"></b></div><small>Expenses</small><div class="big sm" data-cnt="${s.e}">${inr(s.e)}</div><div class="pb"><b data-w="${100*s.e/mx}" style="background:#f9a65a"></b></div><small>Balance</small><div class="big sm" data-cnt="${b}" style="color:${b>=0?'#22c55e':'#ef4444'}">${inr(b)}</div></div><div class="s8">${TX.length?'<canvas id="c3" height="130"></canvas>':'<p class="mut">Add income and expenses in the Transactions tab to see your cash flow here.</p>'}</div></div></div>`};
+function setTk(k){tk=k;$$('#tf .tabs button').forEach(b=>b.classList.toggle('on',b.dataset.k==k));$('#tc').innerHTML=CAT[k].map(c=>`<option>${c}</option>`).join('')}
+function txPage(){ed=null;const s=ts();
+ $('#p-tx').innerHTML=`<div class="bento">${[['Income this month',s.i,'#22c55e'],['Expenses this month',s.e,'#f9a65a'],['Balance',s.i-s.e,s.i>=s.e?'#22c55e':'#ef4444']].map(x=>`<div class="card s4"><small>${x[0]}</small><div class="big" style="color:${x[2]}" data-cnt="${x[1]}">${inr(x[1])}</div></div>`).join('')}
+ <div class="card s4"><b id="fm">Add transaction</b><form id="tf" class="fields"><div class="tabs"><button type="button" data-k="expense">Expense</button><button type="button" data-k="income">Income</button></div><input id="ta" type="number" min="1" step="any" placeholder="Amount (₹)" required><select id="tc"></select><input id="td" type="date" required><input id="tn" placeholder="Note (optional)" maxlength="80"><div class="er" id="te"></div><div style="display:flex;gap:8px"><button class="btn" id="tb">Add</button><button type="button" class="btn alt" id="tcx" hidden>Cancel</button></div></form></div>
+ <div class="card s8"><b>Income vs expenses · last 6 months</b><canvas id="c4" height="140"></canvas></div>
+ <div class="card s4"><b>Expenses by category</b><canvas id="c5" height="220"></canvas></div>
+ <div class="card s8"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center"><b>Transaction history</b><div style="display:flex;gap:8px;flex-wrap:wrap"><div class="tabs" id="ft">${['all','income','expense'].map(f=>`<button type="button" data-f="${f}" class="${f==flt?'on':''}">${f[0].toUpperCase()+f.slice(1)}</button>`).join('')}</div><button class="btn alt" id="tpdf">📄 PDF</button></div></div><div id="tl"></div></div></div>`;
+ setTk(tk);$('#td').value=new Date().toLocaleDateString('en-CA');
+ $$('#tf .tabs button').forEach(b=>b.onclick=()=>setTk(b.dataset.k));
+ $$('#ft button').forEach(b=>b.onclick=()=>{flt=b.dataset.f;$$('#ft button').forEach(x=>x.classList.toggle('on',x==b));txList()});
+ $('#tpdf').onclick=()=>{location.href='/api/tx/pdf'};$('#tcx').onclick=txPage;
+ $('#tf').onsubmit=async e=>{e.preventDefault();const b={kind:tk,amt:+$('#ta').value,cat:$('#tc').value,d:$('#td').value,note:$('#tn').value};try{TX=await api(ed?'/api/tx/'+ed:'/api/tx',b,ed?'PUT':'POST');txPage()}catch(x){$('#te').textContent=x.message}};
+ txList();countUp();charts()}
+function txList(){const r=TX.filter(t=>flt=='all'||t.kind==flt).slice(0,100);$('#tl').innerHTML=r.map((t,i)=>`<div class="txr" id="tx${t.id}" style="animation-delay:${Math.min(i,12)*.04}s"><span class="ti">${IC[t.cat]||'📦'}</span><div class="tm"><b>${esc(t.note||t.cat)}</b><small>${esc(t.cat)} · ${t.d}</small></div><b style="color:${t.kind=='income'?'#22c55e':'#ef4444'}">${t.kind=='income'?'+':'-'}${inr(t.amt)}</b><button data-e="${t.id}" aria-label="Edit">✏️</button><button data-x="${t.id}" aria-label="Delete">🗑️</button></div>`).join('')||'<p class="mut">No transactions yet. Add your first one.</p>';
+ $$('#tl [data-e]').forEach(b=>b.onclick=()=>startEdit(+b.dataset.e));
+ $$('#tl [data-x]').forEach(b=>b.onclick=async()=>{if(!confirm('Delete this transaction?'))return;const row=$('#tx'+b.dataset.x);row.classList.add('gone');try{const x=await api('/api/tx/'+b.dataset.x,null,'DELETE');setTimeout(()=>{TX=x;txPage()},300)}catch(e){row.classList.remove('gone')}})}
+function startEdit(id){const t=TX.find(x=>x.id==id);if(!t)return;ed=id;setTk(t.kind);$('#tc').value=t.cat;$('#ta').value=t.amt;$('#td').value=t.d;$('#tn').value=t.note||'';$('#tb').textContent='Update';$('#tcx').hidden=false;$('#fm').textContent='Edit transaction';$('#tf').scrollIntoView({behavior:'smooth',block:'center'})}
+function txCharts(){C2.forEach(x=>x.destroy());C2=[];const s=ts();Chart.defaults.color=getComputedStyle(document.documentElement).getPropertyValue('--mut').trim();Chart.defaults.font.family="'Plus Jakarta Sans',sans-serif";
+ const mk=(id,cfg)=>{const c=$(id);if(c&&c.offsetParent!==null)C2.push(new Chart(c,cfg))},
+ bar=()=>({type:'bar',data:{labels:s.ms.map(x=>x[0].slice(5)+'/'+x[0].slice(2,4)),datasets:[{label:'Income',data:s.ms.map(x=>x[1][0]),backgroundColor:'#9ccc3c',borderRadius:8},{label:'Expenses',data:s.ms.map(x=>x[1][1]),backgroundColor:'#f9a65a',borderRadius:8}]},options:{plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true,grid:{color:'#8883'}},x:{grid:{display:false}}},animation:{duration:1400}}});
+ mk('#c3',bar());mk('#c4',bar());mk('#c5',{type:'doughnut',data:{labels:Object.keys(s.cat),datasets:[{data:Object.values(s.cat),backgroundColor:['#6fa31f','#9ccc3c','#c7e35a','#f9a65a','#f6c667','#8bd3c7','#ef4444','#6366f1','#ec4899','#b9c2b9'],borderWidth:0}]},options:{cutout:'64%',plugins:{legend:{position:'bottom'}},animation:{duration:1500}}})}
+function charts(){charts0();txCharts()}
+/* settings */
+const avh=()=>U.pic?`<img src="${U.pic}" alt="">`:esc(U.name[0].toUpperCase());
+function setUser(){$('#hi').textContent='Hi, '+U.name+' 👋';$('#av').innerHTML=avh();$('#sav').innerHTML=avh();$('#pn').value=U.name;$('#pe').value=U.email}
+const note=(s,m,bad)=>{const e=$(s);e.textContent=m;e.style.color=bad?'#ef4444':'#22c55e'};
+$('#sp').onclick=async()=>{try{U={...U,...await api('/api/profile',{name:$('#pn').value,email:$('#pe').value})};setUser();note('#pm','Saved ✓')}catch(e){note('#pm',e.message,1)}};
+$('#pwb').onclick=async()=>{try{await api('/api/password',{old:$('#po').value,new:$('#pnw').value});$('#po').value=$('#pnw').value='';note('#pw2','Password updated ✓')}catch(e){note('#pw2',e.message,1)}};
+$('#pu').onclick=()=>$('#pf').click();
+$('#pr').onclick=()=>api('/api/avatar',{pic:''}).then(()=>{U.pic='';setUser()});
+$('#pf').onchange=e=>{const f=e.target.files[0];if(!f)return;const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=c.height=160;const s=Math.min(im.width,im.height);c.getContext('2d').drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,0,0,160,160);const pic=c.toDataURL('image/jpeg',.82);api('/api/avatar',{pic}).then(()=>{U.pic=pic;setUser();note('#pam','Photo updated ✓')}).catch(x=>note('#pam',x.message,1))};im.onerror=()=>note('#pam','Could not read that image.',1);im.src=URL.createObjectURL(f)};
+$('#p-set .tg2').onclick=tgl;
+/* show / hide password */
+$$('input[type=password]').forEach(i=>{const w=document.createElement('div');w.className='pw';i.replaceWith(w);w.append(i);const b=document.createElement('button');b.type='button';b.className='eye';b.textContent='👁️';b.setAttribute('aria-label','Show or hide password');w.append(b)});
+document.addEventListener('click',e=>{const b=e.target.closest('.eye');if(!b)return;const i=b.previousElementSibling,s=i.type=='password';i.type=s?'text':'password';b.textContent=s?'🙈':'👁️'});
 api('/api/me').then(enter).catch(()=>{});
 </script></body></html>

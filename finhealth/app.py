@@ -1,4 +1,4 @@
-import io, os, json, sqlite3
+import io, os, re, json, sqlite3
 from datetime import date
 from xml.sax.saxutils import escape
 from flask import Flask, render_template, request, jsonify, send_file, session
@@ -14,13 +14,18 @@ app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax", P
 DB = os.environ.get("DB_PATH", "fiscalfit.db")
 
 
-def q(sql, a=(), one=False):
+def q(sql, a=(), one=False, many=False):
     c = sqlite3.connect(DB)
     c.row_factory = sqlite3.Row
     c.execute("CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT UNIQUE, pw TEXT, data TEXT DEFAULT '{}', hist TEXT DEFAULT '[]')")
+    c.execute("CREATE TABLE IF NOT EXISTS tx(id INTEGER PRIMARY KEY AUTOINCREMENT, uid INTEGER, kind TEXT, cat TEXT, amt REAL, note TEXT, d TEXT)")
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN pic TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass
     try:
         cur = c.execute(sql, a)
-        r = cur.fetchone() if one else None
+        r = cur.fetchone() if one else cur.fetchall() if many else None
         c.commit()
         return r
     finally:
@@ -33,7 +38,7 @@ def me():
 
 
 def pub(u):
-    return dict(name=u["name"], email=u["email"], data=json.loads(u["data"]), hist=json.loads(u["hist"]))
+    return dict(name=u["name"], email=u["email"], data=json.loads(u["data"]), hist=json.loads(u["hist"]), pic=u["pic"] or "")
 
 
 def err(msg, code=400):
@@ -230,9 +235,128 @@ def delete():
         return err("Please log in.", 401)
     if not check_password_hash(u["pw"], (request.get_json(force=True, silent=True) or {}).get("password") or ""):
         return err("Password is incorrect.", 401)
+    q("DELETE FROM tx WHERE uid=?", (u["id"],))
     q("DELETE FROM users WHERE id=?", (u["id"],))
     session.clear()
     return jsonify(ok=True)
+
+
+@app.post("/api/profile")
+def profile():
+    u = me()
+    if not u:
+        return err("Please log in.", 401)
+    d = request.get_json(force=True, silent=True) or {}
+    name, email = (d.get("name") or "").strip()[:40], (d.get("email") or "").strip().lower()[:120]
+    if not name or "@" not in email or "." not in email:
+        return err("Enter your name and a valid email.")
+    try:
+        q("UPDATE users SET name=?, email=? WHERE id=?", (name, email, u["id"]))
+    except sqlite3.IntegrityError:
+        return err("That email is already used by another account.", 409)
+    return jsonify(pub(me()))
+
+
+@app.post("/api/password")
+def password():
+    u = me()
+    if not u:
+        return err("Please log in.", 401)
+    d = request.get_json(force=True, silent=True) or {}
+    if not check_password_hash(u["pw"], d.get("old") or ""):
+        return err("Current password is incorrect.", 401)
+    if len(d.get("new") or "") < 8:
+        return err("New password must be at least 8 characters.")
+    q("UPDATE users SET pw=? WHERE id=?", (generate_password_hash(d["new"]), u["id"]))
+    return jsonify(ok=True)
+
+
+@app.post("/api/avatar")
+def avatar():
+    u = me()
+    if not u:
+        return err("Please log in.", 401)
+    pic = (request.get_json(force=True, silent=True) or {}).get("pic") or ""
+    if pic and (len(pic) > 200000 or not re.fullmatch(r"data:image/jpeg;base64,[A-Za-z0-9+/=]+", pic)):
+        return err("Invalid image.")
+    q("UPDATE users SET pic=? WHERE id=?", (pic, u["id"]))
+    return jsonify(ok=True)
+
+
+def tx_rows(u):
+    return [dict(id=r["id"], kind=r["kind"], cat=r["cat"], amt=r["amt"], note=r["note"], d=r["d"])
+            for r in q("SELECT * FROM tx WHERE uid=? ORDER BY d DESC, id DESC", (u["id"],), many=True)]
+
+
+def tx_clean(d):
+    amt = num(d.get("amt"))
+    day = (d.get("d") or date.today().isoformat())[:10]
+    try:
+        date.fromisoformat(day)
+    except ValueError:
+        return None
+    if amt <= 0 or amt > 1e10:
+        return None
+    return ("income" if d.get("kind") == "income" else "expense", (d.get("cat") or "Other")[:30], amt, (d.get("note") or "")[:80], day)
+
+
+@app.get("/api/tx")
+def tx_list():
+    u = me()
+    return jsonify(tx_rows(u)) if u else err("Please log in.", 401)
+
+
+@app.post("/api/tx")
+def tx_add():
+    u = me()
+    if not u:
+        return err("Please log in.", 401)
+    t = tx_clean(request.get_json(force=True, silent=True) or {})
+    if not t:
+        return err("Enter a valid amount and date.")
+    q("INSERT INTO tx(uid,kind,cat,amt,note,d) VALUES(?,?,?,?,?,?)", (u["id"], *t))
+    return jsonify(tx_rows(u))
+
+
+@app.put("/api/tx/<int:i>")
+def tx_edit(i):
+    u = me()
+    if not u:
+        return err("Please log in.", 401)
+    t = tx_clean(request.get_json(force=True, silent=True) or {})
+    if not t:
+        return err("Enter a valid amount and date.")
+    q("UPDATE tx SET kind=?, cat=?, amt=?, note=?, d=? WHERE id=? AND uid=?", (*t, i, u["id"]))
+    return jsonify(tx_rows(u))
+
+
+@app.delete("/api/tx/<int:i>")
+def tx_del(i):
+    u = me()
+    if not u:
+        return err("Please log in.", 401)
+    q("DELETE FROM tx WHERE id=? AND uid=?", (i, u["id"]))
+    return jsonify(tx_rows(u))
+
+
+@app.get("/api/tx/pdf")
+def tx_pdf():
+    u = me()
+    if not u:
+        return err("Please log in.", 401)
+    rows = tx_rows(u)[:1000]
+    inc = sum(r["amt"] for r in rows if r["kind"] == "income")
+    exp = sum(r["amt"] for r in rows if r["kind"] != "income")
+    ss, buf = getSampleStyleSheet(), io.BytesIO()
+    data = [["Date", "Type", "Category", "Note", "Amount (Rs.)"]] + [[r["d"], r["kind"].title(), r["cat"], (r["note"] or "")[:34], ("+" if r["kind"] == "income" else "-") + inr(r["amt"])] for r in rows]
+    t = Table(data, repeatRows=1, colWidths=[62, 52, 80, 190, 80])
+    t.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#9ccc3c")), ("GRID", (0, 0), (-1, -1), .3, colors.HexColor("#cbd5d3")),
+                           ("FONTSIZE", (0, 0), (-1, -1), 8), ("ALIGN", (4, 0), (4, -1), "RIGHT"), ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f1f6f5")])]))
+    el = [Paragraph(f"Transactions for {escape(u['name'])}", ss["Title"]),
+          Paragraph(f"Generated {date.today():%d %b %Y} | Income Rs. {inr(inc)} | Expenses Rs. {inr(exp)} | Balance Rs. {inr(inc - exp)}", ss["Normal"]), Spacer(1, 12), t]
+    SimpleDocTemplate(buf, pagesize=A4, leftMargin=36, rightMargin=36, topMargin=36, bottomMargin=36).build(el)
+    buf.seek(0)
+    return send_file(buf, mimetype="application/pdf", as_attachment=True, download_name="transactions.pdf")
 
 
 @app.post("/api/analyze")
