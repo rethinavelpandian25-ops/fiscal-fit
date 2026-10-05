@@ -1,4 +1,4 @@
-import io, os, re, json, sqlite3
+import io, os, re, json, time, hmac, sqlite3
 from datetime import date
 from xml.sax.saxutils import escape
 from flask import Flask, render_template, request, jsonify, send_file, session
@@ -12,6 +12,9 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-only-change-me")
 app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax", PERMANENT_SESSION_LIFETIME=60 * 60 * 24 * 30)
 DB = os.environ.get("DB_PATH", "fiscalfit.db")
+ADMIN_EMAIL = (os.environ.get("ADMIN_EMAIL") or "admin@gmail.com").lower()
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD") or "Admin@123"
+FAILS = {}
 
 
 def q(sql, a=(), one=False, many=False):
@@ -181,7 +184,7 @@ def index():
 def signup():
     d = request.get_json(force=True, silent=True) or {}
     name, email, pw = (d.get("name") or "").strip()[:40], (d.get("email") or "").strip().lower()[:120], d.get("password") or ""
-    if not name or "@" not in email or "." not in email:
+    if not name or "@" not in email or "." not in email or email == ADMIN_EMAIL:
         return err("Enter your name and a valid email.")
     if len(pw) < 8:
         return err("Password must be at least 8 characters.")
@@ -190,6 +193,7 @@ def signup():
     except sqlite3.IntegrityError:
         return err("An account with this email already exists.", 409)
     u = q("SELECT * FROM users WHERE email=?", (email,), True)
+    session.clear()
     session.permanent, session["uid"] = True, u["id"]
     return jsonify(pub(u))
 
@@ -197,9 +201,23 @@ def signup():
 @app.post("/api/login")
 def login():
     d = request.get_json(force=True, silent=True) or {}
-    u = q("SELECT * FROM users WHERE email=?", ((d.get("email") or "").strip().lower(),), True)
+    email = (d.get("email") or "").strip().lower()
+    if email == ADMIN_EMAIL:
+        ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip()
+        now = time.time()
+        FAILS[ip] = [t for t in FAILS.get(ip, []) if now - t < 600]
+        if len(FAILS[ip]) >= 5:
+            return err("Too many attempts. Try again in 10 minutes.", 429)
+        if hmac.compare_digest((d.get("password") or "").encode(), ADMIN_PASSWORD.encode()):
+            session.clear()
+            session["admin"] = True
+            return jsonify(admin=True, name="Admin", email=ADMIN_EMAIL)
+        FAILS[ip].append(now)
+        return err("Wrong email or password.", 401)
+    u = q("SELECT * FROM users WHERE email=?", (email,), True)
     if not u or not check_password_hash(u["pw"], d.get("password") or ""):
         return err("Wrong email or password.", 401)
+    session.clear()
     session.permanent, session["uid"] = True, u["id"]
     return jsonify(pub(u))
 
@@ -212,6 +230,8 @@ def logout():
 
 @app.get("/api/me")
 def api_me():
+    if session.get("admin"):
+        return jsonify(admin=True, name="Admin", email=ADMIN_EMAIL)
     u = me()
     return jsonify(pub(u)) if u else err("Not logged in.", 401)
 
@@ -248,7 +268,7 @@ def profile():
         return err("Please log in.", 401)
     d = request.get_json(force=True, silent=True) or {}
     name, email = (d.get("name") or "").strip()[:40], (d.get("email") or "").strip().lower()[:120]
-    if not name or "@" not in email or "." not in email:
+    if not name or "@" not in email or "." not in email or email == ADMIN_EMAIL:
         return err("Enter your name and a valid email.")
     try:
         q("UPDATE users SET name=?, email=? WHERE id=?", (name, email, u["id"]))
@@ -357,6 +377,54 @@ def tx_pdf():
     SimpleDocTemplate(buf, pagesize=A4, leftMargin=36, rightMargin=36, topMargin=36, bottomMargin=36).build(el)
     buf.seek(0)
     return send_file(buf, mimetype="application/pdf", as_attachment=True, download_name="transactions.pdf")
+
+
+def is_admin():
+    return session.get("admin") is True
+
+
+@app.get("/api/admin/users")
+def adm_users():
+    if not is_admin():
+        return err("Forbidden.", 403)
+    st = {r["uid"]: r for r in q("SELECT uid, COUNT(*) n, SUM(CASE WHEN kind='income' THEN amt ELSE 0 END) i, SUM(CASE WHEN kind!='income' THEN amt ELSE 0 END) e FROM tx GROUP BY uid", many=True)}
+    out = []
+    for u in q("SELECT id, name, email, hist FROM users ORDER BY id DESC", many=True):
+        s, h = st.get(u["id"]), json.loads(u["hist"])
+        out.append(dict(id=u["id"], name=u["name"], email=u["email"], n=s["n"] if s else 0, i=s["i"] if s else 0, e=s["e"] if s else 0, score=h[-1]["s"] if h else None))
+    return jsonify(out)
+
+
+@app.get("/api/admin/user/<int:i>")
+def adm_user(i):
+    if not is_admin():
+        return err("Forbidden.", 403)
+    u = q("SELECT * FROM users WHERE id=?", (i,), True)
+    if not u:
+        return err("User not found.", 404)
+    return jsonify(dict(pub(u), id=u["id"], tx=tx_rows(u)))
+
+
+@app.post("/api/admin/user/<int:i>/password")
+def adm_pw(i):
+    if not is_admin():
+        return err("Forbidden.", 403)
+    new = (request.get_json(force=True, silent=True) or {}).get("new") or ""
+    if len(new) < 8:
+        return err("New password must be at least 8 characters.")
+    if not q("SELECT id FROM users WHERE id=?", (i,), True):
+        return err("User not found.", 404)
+    q("UPDATE users SET pw=? WHERE id=?", (generate_password_hash(new), i))
+    return jsonify(ok=True)
+
+
+@app.delete("/api/admin/user/<int:i>")
+def adm_del(i):
+    if not is_admin():
+        return err("Forbidden.", 403)
+    q("DELETE FROM tx WHERE uid=?", (i,))
+    q("DELETE FROM users WHERE id=?", (i,))
+    return jsonify(ok=True)
 
 
 @app.post("/api/analyze")
