@@ -22,10 +22,11 @@ def q(sql, a=(), one=False, many=False):
     c.row_factory = sqlite3.Row
     c.execute("CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT UNIQUE, pw TEXT, data TEXT DEFAULT '{}', hist TEXT DEFAULT '[]')")
     c.execute("CREATE TABLE IF NOT EXISTS tx(id INTEGER PRIMARY KEY AUTOINCREMENT, uid INTEGER, kind TEXT, cat TEXT, amt REAL, note TEXT, d TEXT)")
-    try:
-        c.execute("ALTER TABLE users ADD COLUMN pic TEXT DEFAULT ''")
-    except sqlite3.OperationalError:
-        pass
+    for col in ("pic", "bud"):
+        try:
+            c.execute(f"ALTER TABLE users ADD COLUMN {col} TEXT DEFAULT ''")
+        except sqlite3.OperationalError:
+            pass
     try:
         cur = c.execute(sql, a)
         r = cur.fetchone() if one else cur.fetchall() if many else None
@@ -41,7 +42,7 @@ def me():
 
 
 def pub(u):
-    return dict(name=u["name"], email=u["email"], data=json.loads(u["data"]), hist=json.loads(u["hist"]), pic=u["pic"] or "")
+    return dict(name=u["name"], email=u["email"], data=json.loads(u["data"]), hist=json.loads(u["hist"]), pic=u["pic"] or "", bud=json.loads(u["bud"] or "{}"))
 
 
 def err(msg, code=400):
@@ -425,6 +426,27 @@ def adm_del(i):
     q("DELETE FROM tx WHERE uid=?", (i,))
     q("DELETE FROM users WHERE id=?", (i,))
     return jsonify(ok=True)
+
+
+@app.post("/api/budgets")
+def budgets():
+    u = me()
+    if not u:
+        return err("Please log in.", 401)
+    b = (request.get_json(force=True, silent=True) or {}).get("bud")
+    if not isinstance(b, dict):
+        return err("Invalid budgets.")
+    clean = {str(k)[:30]: round(num(v)) for k, v in list(b.items())[:20] if num(v) > 0}
+    q("UPDATE users SET bud=? WHERE id=?", (json.dumps(clean), u["id"]))
+    return jsonify(ok=True)
+
+
+@app.get("/sw.js")
+def sw():
+    r = send_file(os.path.join(app.static_folder, "sw.js"), mimetype="application/javascript")
+    r.headers["Service-Worker-Allowed"] = "/"
+    r.headers["Cache-Control"] = "no-cache"
+    return r
 
 
 @app.post("/api/analyze")
