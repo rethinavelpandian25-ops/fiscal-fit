@@ -1,4 +1,4 @@
-import io, os, re, json, time, hmac, sqlite3
+import io, os, re, json, time, hmac, gzip, sqlite3
 from datetime import date
 from xml.sax.saxutils import escape
 from flask import Flask, render_template, request, jsonify, send_file, session
@@ -10,7 +10,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-only-change-me")
-app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax", PERMANENT_SESSION_LIFETIME=60 * 60 * 24 * 30)
+app.config.update(SEND_FILE_MAX_AGE_DEFAULT=86400, SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax", PERMANENT_SESSION_LIFETIME=60 * 60 * 24 * 30)
 DB = os.environ.get("DB_PATH", "fiscalfit.db")
 ADMIN_EMAIL = (os.environ.get("ADMIN_EMAIL") or "admin@gmail.com").lower()
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD") or "Admin@123"
@@ -21,6 +21,7 @@ def q(sql, a=(), one=False, many=False):
     c = sqlite3.connect(DB)
     c.row_factory = sqlite3.Row
     c.execute("CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT UNIQUE, pw TEXT, data TEXT DEFAULT '{}', hist TEXT DEFAULT '[]')")
+    c.execute("CREATE TABLE IF NOT EXISTS goals(id INTEGER PRIMARY KEY AUTOINCREMENT, uid INTEGER, name TEXT, target REAL, saved REAL, due TEXT)")
     c.execute("CREATE TABLE IF NOT EXISTS tx(id INTEGER PRIMARY KEY AUTOINCREMENT, uid INTEGER, kind TEXT, cat TEXT, amt REAL, note TEXT, d TEXT)")
     for col in ("pic", "bud"):
         try:
@@ -257,6 +258,7 @@ def delete():
     if not check_password_hash(u["pw"], (request.get_json(force=True, silent=True) or {}).get("password") or ""):
         return err("Password is incorrect.", 401)
     q("DELETE FROM tx WHERE uid=?", (u["id"],))
+    q("DELETE FROM goals WHERE uid=?", (u["id"],))
     q("DELETE FROM users WHERE id=?", (u["id"],))
     session.clear()
     return jsonify(ok=True)
@@ -424,6 +426,7 @@ def adm_del(i):
     if not is_admin():
         return err("Forbidden.", 403)
     q("DELETE FROM tx WHERE uid=?", (i,))
+    q("DELETE FROM goals WHERE uid=?", (i,))
     q("DELETE FROM users WHERE id=?", (i,))
     return jsonify(ok=True)
 
@@ -447,6 +450,71 @@ def sw():
     r.headers["Service-Worker-Allowed"] = "/"
     r.headers["Cache-Control"] = "no-cache"
     return r
+
+
+@app.after_request
+def compress(r):
+    if (r.status_code == 200 and not r.direct_passthrough and "gzip" in request.headers.get("Accept-Encoding", "")
+            and r.mimetype in ("text/html", "application/json", "application/javascript", "image/svg+xml")
+            and "Content-Encoding" not in r.headers and len(r.get_data()) > 800):
+        data = gzip.compress(r.get_data(), 6)
+        r.set_data(data)
+        r.headers["Content-Encoding"] = "gzip"
+        r.headers["Vary"] = "Accept-Encoding"
+    return r
+
+
+def g_rows(u):
+    return [dict(r) for r in q("SELECT id, name, target, saved, due FROM goals WHERE uid=? ORDER BY id DESC", (u["id"],), many=True)]
+
+
+def g_clean(d):
+    name, target, saved, due = (d.get("name") or "").strip()[:40], num(d.get("target")), max(0, num(d.get("saved"))), (d.get("due") or "")[:10]
+    if due:
+        try:
+            date.fromisoformat(due)
+        except ValueError:
+            return None
+    return (name, target, saved, due) if name and 0 < target < 1e11 else None
+
+
+@app.get("/api/goals")
+def goals_list():
+    u = me()
+    return jsonify(g_rows(u)) if u else err("Please log in.", 401)
+
+
+@app.post("/api/goals")
+def goals_add():
+    u = me()
+    if not u:
+        return err("Please log in.", 401)
+    g = g_clean(request.get_json(force=True, silent=True) or {})
+    if not g:
+        return err("Enter a goal name and a valid target amount.")
+    q("INSERT INTO goals(uid,name,target,saved,due) VALUES(?,?,?,?,?)", (u["id"], *g))
+    return jsonify(g_rows(u))
+
+
+@app.put("/api/goals/<int:i>")
+def goals_edit(i):
+    u = me()
+    if not u:
+        return err("Please log in.", 401)
+    g = g_clean(request.get_json(force=True, silent=True) or {})
+    if not g:
+        return err("Enter a goal name and a valid target amount.")
+    q("UPDATE goals SET name=?, target=?, saved=?, due=? WHERE id=? AND uid=?", (*g, i, u["id"]))
+    return jsonify(g_rows(u))
+
+
+@app.delete("/api/goals/<int:i>")
+def goals_del(i):
+    u = me()
+    if not u:
+        return err("Please log in.", 401)
+    q("DELETE FROM goals WHERE id=? AND uid=?", (i, u["id"]))
+    return jsonify(g_rows(u))
 
 
 @app.post("/api/analyze")
